@@ -1,11 +1,36 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+/**
+ * Customer Signup Form Component
+ *
+ * This component handles customer registration for the insurance claims system.
+ * It collects personal information, address details, and vehicle information
+ * to create a customer profile and associated insurance policy.
+ *
+ * Form Sections:
+ * 1. Personal Information - First name, last name, email, SSN
+ * 2. Address - Street, city, state, zip code
+ * 3. Vehicle Details - Make, model, color, type, year, mileage, VIN
+ *
+ * On submission, the form data is sent to the Signup API which triggers:
+ * - Customer record creation in DynamoDB
+ * - Policy record creation with vehicle details
+ * - Customer.Submitted event published to EventBridge
+ * - Validation workflow initiated (Customer.Accepted or Customer.Rejected)
+ */
+
 import React from "react";
 import { Button, TextField, Flex } from "@aws-amplify/ui-react";
 import { API, Auth } from "aws-amplify";
 import ClearData from "./ClearData";
 
+/**
+ * SignupForm Component
+ *
+ * Multi-field form for customer registration with validation.
+ * Pre-populates fields with existing customer data if available.
+ */
 class SignupForm extends React.Component {
   initial_value = { value: "", hasError: false, errorMessage: "" };
   fields = [
@@ -28,6 +53,13 @@ class SignupForm extends React.Component {
   updateParent;
   getCustomer;
 
+  /**
+   * Initializes form state with empty field values and binds event handlers.
+   *
+   * @param {Object} props - Component props
+   * @param {Function} props.updateState - Callback to update parent state
+   * @param {Function} props.getCustomer - Function to fetch customer data
+   */
   constructor(props) {
     super(props);
     this.state = {
@@ -59,16 +91,35 @@ class SignupForm extends React.Component {
     this.reset = this.reset.bind(this);
   }
 
+  /**
+   * Resets the form by updating the parent component's key.
+   */
   async reset() {
     this.updateParent("key", new Date().getTime());
   }
 
+  /**
+   * Extracts a customer field value with a default fallback.
+   *
+   * @param {Object} customer - Customer data object
+   * @param {string} field - Field name to extract
+   * @param {string} defVal - Default value if field is missing
+   * @returns {Object} Object with value property
+   */
   getValue(customer, field, defVal) {
     return {
       value: customer && customer[field] ? customer[field] : defVal,
     };
   }
 
+  /**
+   * Extracts a policy field value from the first policy with a default fallback.
+   *
+   * @param {Object} customer - Customer data object with policies array
+   * @param {string} field - Field name to extract from policy
+   * @param {string} defVal - Default value if field is missing
+   * @returns {Object} Object with value property
+   */
   getPolicyValue(customer, field, defVal) {
     return {
       value:
@@ -81,6 +132,12 @@ class SignupForm extends React.Component {
     };
   }
 
+  /**
+   * Loads existing customer data and pre-populates form fields.
+   *
+   * Fetches the current authenticated user's email and any existing
+   * customer/policy data to pre-fill the form with known values.
+   */
   async componentDidMount() {
     const user = await Auth.currentAuthenticatedUser();
     const customer = await this.getCustomer();
@@ -109,6 +166,11 @@ class SignupForm extends React.Component {
     });
   }
 
+  /**
+   * Handles input field changes and updates component state.
+   *
+   * @param {Event} event - Input change event
+   */
   handleInputChange(event) {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
@@ -118,6 +180,11 @@ class SignupForm extends React.Component {
     });
   }
 
+  /**
+   * Validates all required form fields.
+   *
+   * @returns {boolean} True if all fields are valid, false otherwise
+   */
   validateInput() {
     let is_valid = true;
     this.fields.forEach((field) => {
@@ -135,6 +202,12 @@ class SignupForm extends React.Component {
     return is_valid;
   }
 
+  /**
+   * Submits the registration form to the Signup API.
+   *
+   * Validates input, constructs the request payload with personal info,
+   * address, and vehicle details, then posts to the API endpoint.
+   */
   async submitForm() {
     if (!this.validateInput()) return;
 
@@ -165,13 +238,16 @@ class SignupForm extends React.Component {
             vin: this.state.vehicle_vin.value,
           },
         ],
-      }, // replace this with attributes you need
-      headers: {}, // OPTIONAL
+      },
+      headers: {},
     };
 
     await API.post(apiName, path, myInit);
   }
 
+  /**
+   * Triggers display of the claims form in the parent component.
+   */
   async showClaimsForm() {
     await this.updateParent("displayClaimForm", true);
   }

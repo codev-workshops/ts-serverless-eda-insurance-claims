@@ -1,6 +1,25 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+/**
+ * Claim Form Component
+ *
+ * This component handles First Notice of Loss (FNOL) claim submissions.
+ * FNOL is the initial report made to an insurance company when an incident occurs.
+ * The form collects incident details, location, personal information, and
+ * other party details to initiate the claims processing workflow.
+ *
+ * Form Sections:
+ * 1. Incident Details - Date, description, number of passengers
+ * 2. Location - Country, state, city, zip, road
+ * 3. Personal Information - Driver's license number, police report status
+ * 4. Other Party - Insurance details and contact information
+ *
+ * On submission, the form data is sent to the FNOL API which triggers:
+ * - Claim.Requested event published to EventBridge
+ * - Claims processing workflow (validation, fraud detection, settlement)
+ */
+
 import React from "react";
 import {
   Flex,
@@ -11,8 +30,21 @@ import {
 import date from 'date-and-time';
 import { API } from "aws-amplify";
 
+/**
+ * TF (TextField) Component
+ *
+ * A reusable wrapper around Amplify UI TextField that manages its own state
+ * and provides consistent styling and error handling across the form.
+ */
 class TF extends React.Component {
   onChange;
+
+  /**
+   * Initializes the TextField wrapper component.
+   *
+   * @param {Object} props - Component props
+   * @param {Function} props.onChange - Change handler callback
+   */
   constructor(props) {
     super(props);
     this.state = {};
@@ -42,7 +74,20 @@ class TF extends React.Component {
   }
 }
 
+/**
+ * ClaimForm Component
+ *
+ * Multi-section form for submitting First Notice of Loss (FNOL) claims.
+ * Pre-populates with sample data for demo purposes and validates against
+ * the customer's policy information.
+ */
 class ClaimForm extends React.Component {
+  /**
+   * Initializes form state with default values for demo purposes.
+   *
+   * @param {Object} props - Component props
+   * @param {Object} props.customer - Customer data with policy information
+   */
   constructor(props) {
     super(props);
     const futureDate = date.format(date.addDays(new Date(), 3), 'YYYY-MM-DD');
@@ -90,6 +135,11 @@ class ClaimForm extends React.Component {
     this.handleInputChange = this.handleInputChange.bind(this);
   }
 
+  /**
+   * Handles input field changes and updates component state.
+   *
+   * @param {Event} event - Input change event
+   */
   handleInputChange(event) {
     const target = event.target;
     const value = target.type === "checkbox" ? target.checked : target.value;
@@ -107,6 +157,13 @@ class ClaimForm extends React.Component {
     };
   }
 
+  /**
+   * Submits the FNOL claim to the backend API.
+   *
+   * Constructs the claim payload with incident details, policy reference,
+   * personal information, police report status, and other party details.
+   * Posts to the FNOL API which triggers the claims processing workflow.
+   */
   async submitClaim() {
     const body = {
       incident: {

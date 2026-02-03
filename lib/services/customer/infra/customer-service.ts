@@ -1,6 +1,25 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+/**
+ * Customer Service Infrastructure
+ *
+ * This CDK construct creates all AWS resources for the Customer Service, which handles
+ * customer registration, profile management, and insurance policy data.
+ *
+ * Components:
+ * - DynamoDB Tables: Customer data, Policy data, and Request tracking
+ * - Lambda Functions: Signup, Customer Update, Validation, Pre-signed URL generation
+ * - Step Functions: Customer creation and policy update workflows
+ * - API Gateway: REST APIs for signup and customer retrieval
+ * - WAF: Web Application Firewall protection for APIs
+ *
+ * Event Subscriptions:
+ * - Customer.Submitted -> Triggers customer creation workflow
+ * - Fraud.Not.Detected (DRIVERS_LICENSE) -> Updates customer with verified DL data
+ * - Fraud.Not.Detected (CAR) -> Updates policy with verified vehicle data
+ */
+
 import { RemovalPolicy } from "aws-cdk-lib";
 import {
   AuthorizationType,
@@ -40,6 +59,13 @@ import { CreateCustomerStepFunction } from "./step-functions/createCustomer";
 import { UpdatePolicyStepFunction } from "./step-functions/updatePolicy";
 import { CfnWebACL, CfnWebACLAssociation } from "aws-cdk-lib/aws-wafv2";
 
+/**
+ * Adds default 4XX error response with CORS headers to an API Gateway REST API.
+ * This ensures that client-side applications receive proper error responses
+ * with the necessary CORS headers for cross-origin requests.
+ *
+ * @param api - The REST API to configure
+ */
 function addDefaultGatewayResponse(api: RestApi) {
   api.addGatewayResponse("default-4xx-response", {
     type: ResponseType.DEFAULT_4XX,
@@ -52,14 +78,28 @@ function addDefaultGatewayResponse(api: RestApi) {
   });
 }
 
+/**
+ * Properties required to create a CustomerService construct.
+ */
 interface CustomerServiceProps {
+  /** The EventBridge bus for publishing and subscribing to events */
   bus: EventBus;
+  /** S3 bucket for storing customer documents (shared with DocumentService) */
   documentsBucket: Bucket;
 }
 
+/**
+ * Customer Service CDK Construct
+ *
+ * Creates and configures all infrastructure for customer management including
+ * data storage, APIs, Lambda functions, and event-driven workflows.
+ */
 export class CustomerService extends Construct {
+  /** DynamoDB table storing customer profile data */
   public customerTable: Table;
+  /** DynamoDB table storing insurance policy data */
   public policyTable: Table;
+  /** CloudWatch metrics widget for the observability dashboard */
   public readonly customerMetricsWidget: GraphWidget;
 
   constructor(scope: Construct, id: string, props: CustomerServiceProps) {

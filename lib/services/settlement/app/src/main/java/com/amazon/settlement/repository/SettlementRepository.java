@@ -16,18 +16,51 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemResponse;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Settlement Repository
+ *
+ * Data access layer for persisting settlement records to Amazon DynamoDB.
+ * This repository handles the storage of settlement details including
+ * customer ID, claim ID, settlement message, and vehicle analysis results.
+ *
+ * DynamoDB Table Schema:
+ * - Id (String): Unique settlement identifier (UUID)
+ * - customerId (String): Customer identifier
+ * - claimId (String): Associated claim identifier
+ * - settlementMessage (String): Customer-facing settlement message
+ * - color (String): Detected vehicle color
+ * - damage (String): Detected damage type
+ */
 @Slf4j
 @Repository
 public class SettlementRepository {
 
+  /** DynamoDB table name, injected from application properties */
   @Value("${dynamodb.table.name}")
   private String tableName;
+
   private final DynamoDbClient dynamoDbClient;
 
+  /**
+   * Constructs a SettlementRepository with the required DynamoDB client.
+   *
+   * @param dynamoDbClient AWS SDK DynamoDB client for database operations
+   */
   public SettlementRepository(DynamoDbClient dynamoDbClient) {
     this.dynamoDbClient = dynamoDbClient;
   }
 
+  /**
+   * Persists a settlement record to DynamoDB.
+   *
+   * Creates a new settlement record with a generated UUID and stores all
+   * relevant claim and analysis details. Returns a response object containing
+   * the settlement ID and message for downstream processing.
+   *
+   * @param requestCommand Settlement request with claim and customer details
+   * @param settlementMessage Customer-facing message describing the settlement
+   * @return SettlementResponse with generated settlement ID and details
+   */
   public SettlementResponse saveSettlement(
     final SettlementRequest requestCommand,
     final String settlementMessage

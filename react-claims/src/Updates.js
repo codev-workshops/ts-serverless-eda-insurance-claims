@@ -1,6 +1,27 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+/**
+ * Real-time Updates Component
+ *
+ * This module provides real-time event notifications from the backend services
+ * to the frontend using AWS IoT Core over WebSocket (MQTT). It displays a
+ * vertical timeline of events as they occur during claims processing.
+ *
+ * Architecture:
+ * - Subscribes to user-specific IoT topics using Cognito Identity ID
+ * - Receives events published by the Notifications Lambda function
+ * - Displays events in a visual timeline with success/error indicators
+ *
+ * Event Types Handled:
+ * - Customer.Accepted / Customer.Rejected - Registration status
+ * - Document.Processed - Document analysis results
+ * - Claim.Accepted / Claim.Rejected - Claim validation status
+ * - Fraud.Detected / Fraud.Not.Detected - Fraud detection results
+ * - Settlement.Finalized - Settlement calculation complete
+ * - Vendor.Finalized - Rental car vendor assignment
+ */
+
 import React from "react";
 import { Button, Flex, ScrollView, Heading } from "@aws-amplify/ui-react";
 import { PubSub, Auth, API, Amplify } from "aws-amplify";
@@ -13,9 +34,21 @@ import { VerticalTimeline, VerticalTimelineElement }  from 'react-vertical-timel
 import 'react-vertical-timeline-component/style.min.css';
 import "./App.css"
 
+/**
+ * UpdateArea Component
+ *
+ * Displays real-time event notifications from backend services in a scrollable
+ * timeline view. Automatically advances the wizard when certain events are received.
+ */
 class UpdateArea extends React.Component {
   updateParent;
 
+  /**
+   * Initializes the component state and binds event handlers.
+   *
+   * @param {Object} props - Component props
+   * @param {Function} props.updateState - Callback to update parent App state
+   */
   constructor(props) {
     super(props);
     this.state = {
@@ -28,12 +61,23 @@ class UpdateArea extends React.Component {
     this.resetMessages = this.resetMessages.bind(this);
   }
 
+  /**
+   * Clears all messages from the timeline display.
+   */
   async resetMessages() {
     this.setState({
       messages: [],
     });
   }
 
+  /**
+   * Processes incoming IoT messages and updates application state.
+   *
+   * Handles different event types to advance the wizard, update S3 URLs
+   * for document uploads, and trigger registration completion.
+   *
+   * @param {Object} data - IoT message data containing event details
+   */
   async updateMessages(data) {
     let messages = this.state.messages;
     messages.push(data.value);
@@ -65,6 +109,9 @@ class UpdateArea extends React.Component {
     }
   }
 
+  /**
+   * Sets up the IoT subscription when the component mounts.
+   */
   async componentDidMount() {
     createSubscription(this.updateMessages);
   }
@@ -109,6 +156,16 @@ class UpdateArea extends React.Component {
 
 export default UpdateArea;
 
+/**
+ * Creates an IoT Core subscription for real-time event notifications.
+ *
+ * Configures the AWS IoT Provider with the user's Cognito credentials and
+ * subscribes to their identity-specific topic. Handles connection errors
+ * by retrying with updated IoT policy attachment.
+ *
+ * @param {Function} nextFunc - Callback function to handle incoming messages
+ * @param {boolean} isRetry - Whether this is a retry attempt after error
+ */
 function createSubscription(nextFunc, isRetry) {
   var pubSubEndpoint = getEndpointUrl("iotendpointaddress");
 
@@ -140,6 +197,14 @@ function createSubscription(nextFunc, isRetry) {
   });
 }
 
+/**
+ * Attaches the IoT policy to the current user's Cognito identity.
+ *
+ * Calls the IOT API to ensure the user has the necessary permissions
+ * to subscribe to their IoT topic for receiving notifications.
+ *
+ * @returns {Promise<Object>} API response
+ */
 async function updateCustomer() {
   const apiName = "IOTApi";
   const path = "iotPolicy";
@@ -152,6 +217,13 @@ async function updateCustomer() {
   return resp;
 }
 
+/**
+ * Notifications Component
+ *
+ * Renders a vertical timeline of event notifications with visual indicators
+ * for success (blue) and error (red) states. Automatically scrolls to show
+ * the latest messages.
+ */
 class Notifications extends React.Component {
   messagesEndRef = React.createRef();
 
@@ -177,6 +249,12 @@ class Notifications extends React.Component {
     };
   }
 
+  /**
+   * Extracts human-readable information from successful event messages.
+   *
+   * @param {Object} message - EventBridge event message
+   * @returns {string} Formatted information string for display
+   */
   extractInformation(message) {
     const detailType = message["detail-type"];
     const detail = message.detail;
@@ -218,6 +296,12 @@ class Notifications extends React.Component {
     return information;
   }
 
+  /**
+   * Extracts error messages from failed event messages.
+   *
+   * @param {Object} message - EventBridge event message
+   * @returns {string} Error message for display
+   */
   extractErrorMessage(message) {
     const detailType = message["detail-type"];
     const detail = message.detail;

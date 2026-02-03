@@ -1,6 +1,31 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+/**
+ * Insurance Claims Processing Frontend Application
+ *
+ * This React application provides the user interface for the serverless event-driven
+ * insurance claims processing system. It guides users through a multi-step wizard
+ * for customer registration, document upload, and claim submission.
+ *
+ * Application Flow:
+ * 1. Customer Registration (SignupForm) - Collect personal and policy information
+ * 2. Driver's License Upload (UploadFile) - Upload ID document for verification
+ * 3. Vehicle Image Upload (UploadFile) - Upload vehicle photo for policy
+ * 4. Claim Submission (ClaimForm) - Submit First Notice of Loss (FNOL)
+ * 5. Damaged Vehicle Upload (UploadFile) - Upload damage photos for claims
+ * 6. Completion - Claim submitted successfully
+ *
+ * Real-time Updates:
+ * The UpdateArea component subscribes to AWS IoT Core topics to receive real-time
+ * notifications about processing status (customer acceptance, fraud detection,
+ * settlement finalization, etc.)
+ *
+ * Authentication:
+ * Uses AWS Amplify with Cognito for user authentication. The withAuthenticator
+ * HOC wraps the app to require sign-in before access.
+ */
+
 import SignupForm from "./Signup";
 import UpdateArea from "./Updates";
 import UploadFile from "./UploadFile";
@@ -30,7 +55,19 @@ import damaged_car_2 from "./Vehicles/damaged_car_2.jpeg";
 import red_car from "./Vehicles/red_car.jpg";
 import green_car from "./Vehicles/green_car.jpg";
 
+/**
+ * Main Application Component
+ *
+ * Orchestrates the multi-step claims processing wizard and manages application state.
+ * Uses react-step-wizard for navigation between registration, document upload,
+ * and claim submission steps.
+ */
 class App extends React.Component {
+  /**
+   * Initializes the application state and binds event handlers.
+   *
+   * @param {Object} props - React component props
+   */
   constructor(props) {
     super(props);
     this.state = { uploadDL: false, displayClaimForm: false, key: 1, stepCompleted: 1, btnVisibility: "none" };
@@ -44,6 +81,15 @@ class App extends React.Component {
     }
   }
 
+  /**
+   * Updates application state and handles step progression.
+   *
+   * When registration is completed, fetches customer data from the API.
+   * When nextStep is triggered, advances the wizard to the next step.
+   *
+   * @param {string} key - State key to update
+   * @param {any} value - New value for the state key
+   */
   async updateState(key, value) {
     this.setState({ [key]: value });
     if (key === "completedReg" && value === true) {
@@ -59,6 +105,14 @@ class App extends React.Component {
     }
   }
 
+  /**
+   * Fetches customer data from the Customer API.
+   *
+   * Retrieves the current user's customer profile and associated policies
+   * using AWS Amplify API with IAM authentication.
+   *
+   * @returns {Promise<Object>} Customer data including policies
+   */
   getCustomer() {
     return new Promise((resolve, reject) => {
       const apiName = "CustomerApi";
@@ -76,10 +130,19 @@ class App extends React.Component {
     });
   }
 
+  /**
+   * Signs out the current user using AWS Amplify Auth.
+   */
   signOut() {
     Auth.signOut();
   }
 
+  /**
+   * Controls the visibility of the Next button based on wizard progress.
+   *
+   * Shows the Next button only if the user has already completed the current step,
+   * allowing them to navigate forward through previously completed steps.
+   */
   checkBtnVisibility() {
     if (this.wizard.currentStep < this.state.stepCompleted) {
       this.setState({ btnVisibility: "block" });

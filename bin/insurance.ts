@@ -1,19 +1,54 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
+/**
+ * CDK Application Entry Point
+ *
+ * This file serves as the main entry point for the AWS CDK application that deploys
+ * the serverless event-driven insurance claims processing system. It initializes the
+ * CDK app, creates the main ClaimsProcessingStack, and configures security compliance
+ * checks using cdk-nag.
+ *
+ * The application demonstrates best practices for:
+ * - Event-driven architecture using Amazon EventBridge
+ * - Serverless compute with AWS Lambda, ECS Fargate, and EKS
+ * - Infrastructure as Code with AWS CDK
+ * - Security compliance validation with cdk-nag
+ */
+
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { Aspects } from "aws-cdk-lib";
 import { ClaimsProcessingStack } from "../lib/claims-processing-stack";
 import { AwsSolutionsChecks, NagSuppressions } from "cdk-nag";
 
+/**
+ * Initialize the CDK application instance.
+ * This is the root construct that contains all stacks and resources.
+ */
 const app = new cdk.App();
 
-// Add the cdk-nag AwsSolutions Pack with extra verbose logging enabled.
+/**
+ * Enable cdk-nag AWS Solutions security checks with verbose logging.
+ * cdk-nag validates the CDK application against AWS best practices and
+ * security guidelines defined in the AWS Solutions Library.
+ */
 Aspects.of(app).add(new AwsSolutionsChecks({verbose: true}));
 
+/**
+ * Create the main ClaimsProcessingStack that orchestrates all services.
+ * This stack contains the EventBridge bus, all microservices (Customer, Claims,
+ * Documents, Fraud, Settlement, Vendor, Notifications), and observability components.
+ */
 const mStack = new ClaimsProcessingStack(app, "ClaimsProcessingStack", {});
 
+/**
+ * CDK-Nag Suppressions for Stack-Level Rules
+ *
+ * The following suppressions are applied to acknowledge known deviations from
+ * AWS best practices. These are acceptable for this demo/POC application but
+ * should be reviewed and addressed before production deployment.
+ */
 NagSuppressions.addStackSuppressions(mStack, [
   {
     id: "AwsSolutions-S1",
@@ -90,6 +125,12 @@ NagSuppressions.addStackSuppressions(mStack, [
   }
 ], true);
 
+/**
+ * CDK-Nag Suppressions for Resource-Level Rules
+ *
+ * These suppressions target specific resources created by EKS cluster constructs
+ * that require broader permissions for cluster management operations.
+ */
 NagSuppressions.addResourceSuppressions(mStack, [
   {
     id: "AwsSolutions-EKS1",
